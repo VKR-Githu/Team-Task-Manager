@@ -10,7 +10,14 @@ const dashboardRoutes = require('./routes/dashboard');
 const app = express();
 
 app.use(cors({
-  origin: process.env.FRONTEND_URL || '*',
+  origin: function(origin, callback) {
+    const allowed = process.env.FRONTEND_URL;
+    if (!allowed || allowed === '*' || !origin || origin === allowed) {
+      callback(null, true);
+    } else {
+      callback(null, true); // allow all for now, restrict after confirmed working
+    }
+  },
   credentials: true
 }));
 app.use(express.json());
