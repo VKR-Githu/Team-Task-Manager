@@ -17,8 +17,9 @@ export default function Signup() {
       await signup(form.name, form.email, form.password);
       navigate('/dashboard');
     } catch (err) {
-      const msg = err.response?.data?.errors?.[0]?.msg || err.response?.data?.error || 'Signup failed';
-      setError(msg);
+      const data = err.response?.data;
+      const msg = data?.errors?.[0]?.msg || data?.error || err.message || 'Signup failed';
+      setError(String(msg));
     } finally {
       setLoading(false);
     }
