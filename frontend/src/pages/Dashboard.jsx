@@ -3,16 +3,16 @@ import { Link } from 'react-router-dom';
 import api from '../lib/api';
 import { format, isPast } from 'date-fns';
 
-const statusColors = {
-  TODO: 'bg-gray-100 text-gray-700',
-  IN_PROGRESS: 'bg-blue-100 text-blue-700',
-  DONE: 'bg-green-100 text-green-700'
+const statusConfig = {
+  TODO: { label: 'To Do', color: 'text-slate-400', bg: 'bg-slate-800', dot: 'bg-slate-500' },
+  IN_PROGRESS: { label: 'In Progress', color: 'text-blue-400', bg: 'bg-blue-900/30', dot: 'bg-blue-400' },
+  DONE: { label: 'Done', color: 'text-emerald-400', bg: 'bg-emerald-900/30', dot: 'bg-emerald-400' }
 };
 
-const priorityColors = {
-  LOW: 'bg-gray-100 text-gray-600',
-  MEDIUM: 'bg-yellow-100 text-yellow-700',
-  HIGH: 'bg-red-100 text-red-700'
+const priorityConfig = {
+  LOW: { label: 'Low', color: 'text-slate-400', bg: 'bg-slate-800' },
+  MEDIUM: { label: 'Medium', color: 'text-amber-400', bg: 'bg-amber-900/30' },
+  HIGH: { label: 'High', color: 'text-red-400', bg: 'bg-red-900/30' }
 };
 
 export default function Dashboard() {
@@ -23,67 +23,90 @@ export default function Dashboard() {
     api.get('/dashboard').then(res => setData(res.data)).finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <div className="p-8 text-gray-500">Loading dashboard...</div>;
+  if (loading) return (
+    <div className="flex items-center justify-center h-full min-h-screen">
+      <div className="flex items-center gap-3 text-slate-400">
+        <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+        </svg>
+        Loading...
+      </div>
+    </div>
+  );
 
   const { totalProjects, myTasks, overdueTasks, tasksByStatus } = data;
 
   return (
-    <div className="p-8">
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Dashboard</h1>
+    <div className="p-8 max-w-6xl mx-auto">
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold text-white">Dashboard</h1>
+        <p className="text-slate-400 text-sm mt-1">Here's what's happening across your projects</p>
+      </div>
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <StatCard label="Projects" value={totalProjects} color="blue" />
-        <StatCard label="My Tasks" value={myTasks.length} color="purple" />
-        <StatCard label="Overdue" value={overdueTasks} color="red" />
-        <StatCard label="Completed" value={tasksByStatus.DONE || 0} color="green" />
+        <StatCard label="Projects" value={totalProjects} icon="📁" accent="violet" />
+        <StatCard label="My Tasks" value={myTasks.length} icon="📋" accent="blue" />
+        <StatCard label="Overdue" value={overdueTasks} icon="⚠️" accent="red" />
+        <StatCard label="Completed" value={tasksByStatus.DONE || 0} icon="✅" accent="emerald" />
       </div>
 
-      {/* Task status breakdown */}
+      {/* Status breakdown */}
       <div className="grid grid-cols-3 gap-4 mb-8">
-        {Object.entries(tasksByStatus).map(([status, count]) => (
-          <div key={status} className="bg-white rounded-xl border border-gray-200 p-4">
-            <span className={`text-xs font-medium px-2 py-1 rounded-full ${statusColors[status]}`}>
-              {status.replace('_', ' ')}
-            </span>
-            <p className="text-3xl font-bold text-gray-900 mt-3">{count}</p>
-            <p className="text-sm text-gray-500">tasks</p>
+        {Object.entries(statusConfig).map(([status, cfg]) => (
+          <div key={status} className="card p-5">
+            <div className="flex items-center gap-2 mb-3">
+              <span className={`w-2 h-2 rounded-full ${cfg.dot}`} />
+              <span className={`text-xs font-semibold uppercase tracking-wide ${cfg.color}`}>{cfg.label}</span>
+            </div>
+            <p className="text-3xl font-bold text-white">{tasksByStatus[status] || 0}</p>
+            <p className="text-xs text-slate-500 mt-1">tasks</p>
           </div>
         ))}
       </div>
 
       {/* My tasks */}
-      <div className="bg-white rounded-xl border border-gray-200">
-        <div className="p-5 border-b border-gray-100">
-          <h2 className="font-semibold text-gray-900">My Tasks</h2>
+      <div className="card">
+        <div className="px-6 py-4 border-b border-slate-800 flex items-center justify-between">
+          <h2 className="font-semibold text-white">My Tasks</h2>
+          <span className="text-xs text-slate-500">{myTasks.length} total</span>
         </div>
         {myTasks.length === 0 ? (
-          <p className="p-5 text-gray-500 text-sm">No tasks assigned to you yet.</p>
+          <div className="px-6 py-12 text-center">
+            <p className="text-slate-500 text-sm">No tasks assigned to you yet</p>
+          </div>
         ) : (
-          <div className="divide-y divide-gray-100">
-            {myTasks.map(task => (
-              <div key={task.id} className="p-4 flex items-center justify-between hover:bg-gray-50">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusColors[task.status]}`}>
-                      {task.status.replace('_', ' ')}
-                    </span>
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${priorityColors[task.priority]}`}>
-                      {task.priority}
-                    </span>
+          <div className="divide-y divide-slate-800">
+            {myTasks.map(task => {
+              const isOverdue = task.dueDate && isPast(new Date(task.dueDate)) && task.status !== 'DONE';
+              const sCfg = statusConfig[task.status];
+              const pCfg = priorityConfig[task.priority];
+              return (
+                <div key={task.id} className="px-6 py-4 flex items-center justify-between hover:bg-slate-800/50 transition-colors">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                      <span className={`inline-flex items-center gap-1.5 text-xs px-2 py-0.5 rounded-lg font-medium ${sCfg.bg} ${sCfg.color}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${sCfg.dot}`} />
+                        {sCfg.label}
+                      </span>
+                      <span className={`text-xs px-2 py-0.5 rounded-lg font-medium ${pCfg.bg} ${pCfg.color}`}>
+                        {pCfg.label}
+                      </span>
+                    </div>
+                    <p className="text-sm font-medium text-slate-200 truncate">{task.title}</p>
+                    <Link to={`/projects/${task.project.id}`} className="text-xs text-violet-400 hover:text-violet-300">
+                      {task.project.name}
+                    </Link>
                   </div>
-                  <p className="text-sm font-medium text-gray-900 truncate">{task.title}</p>
-                  <Link to={`/projects/${task.project.id}`} className="text-xs text-blue-600 hover:underline">
-                    {task.project.name}
-                  </Link>
+                  {task.dueDate && (
+                    <span className={`text-xs ml-4 shrink-0 px-2 py-1 rounded-lg ${isOverdue ? 'bg-red-900/30 text-red-400' : 'bg-slate-800 text-slate-400'}`}>
+                      {format(new Date(task.dueDate), 'MMM d')}
+                    </span>
+                  )}
                 </div>
-                {task.dueDate && (
-                  <span className={`text-xs ml-4 ${isPast(new Date(task.dueDate)) && task.status !== 'DONE' ? 'text-red-600 font-medium' : 'text-gray-400'}`}>
-                    {format(new Date(task.dueDate), 'MMM d')}
-                  </span>
-                )}
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
@@ -91,17 +114,20 @@ export default function Dashboard() {
   );
 }
 
-function StatCard({ label, value, color }) {
-  const colors = {
-    blue: 'bg-blue-50 text-blue-600',
-    purple: 'bg-purple-50 text-purple-600',
-    red: 'bg-red-50 text-red-600',
-    green: 'bg-green-50 text-green-600'
+function StatCard({ label, value, icon, accent }) {
+  const accents = {
+    violet: 'text-violet-400',
+    blue: 'text-blue-400',
+    red: 'text-red-400',
+    emerald: 'text-emerald-400'
   };
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-5">
-      <p className="text-sm text-gray-500">{label}</p>
-      <p className={`text-3xl font-bold mt-1 ${colors[color].split(' ')[1]}`}>{value}</p>
+    <div className="card p-5">
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">{label}</p>
+        <span className="text-lg">{icon}</span>
+      </div>
+      <p className={`text-3xl font-bold ${accents[accent]}`}>{value}</p>
     </div>
   );
 }
